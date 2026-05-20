@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { joinTeam, createTeam } from "@/app/lib/actions/teams";
+import { joinTeam, createAndJoinTeam } from "@/app/lib/actions/teams";
 
 interface Team {
   id: string;
@@ -36,7 +36,7 @@ export function JoinTeamClient({ teams, canCreateTeams }: { teams: Team[]; canCr
     setError("");
     setFieldErrors({});
     createTransition(async () => {
-      const result = await createTeam(formData);
+      const result = await createAndJoinTeam(formData);
       if (result && typeof result === "object" && "error" in result && result.error) {
         setError(result.error as string);
         const fe = (result as { fieldErrors?: Record<string, string[]> }).fieldErrors;

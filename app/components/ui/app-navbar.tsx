@@ -17,9 +17,10 @@ interface AppNavbarProps {
   teamName: string;
   userName: string;
   userEmail: string;
+  canCreateTeam: boolean;
 }
 
-export function AppNavbar({ teamName, userName, userEmail }: AppNavbarProps) {
+export function AppNavbar({ teamName, userName, userEmail, canCreateTeam }: AppNavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [navOpen, setNavOpen] = useState(false);
@@ -69,9 +70,18 @@ export function AppNavbar({ teamName, userName, userEmail }: AppNavbarProps) {
               {navOpen ? <path d="M5 5l14 14M5 15L19 5" /> : <path d="M4 7h14M4 12h14M4 17h14" />}
             </svg>
           </button>
-          <span className="text-sm font-semibold text-white tracking-tight truncate hidden sm:inline">
-            UFTech Tasks
-          </span>
+          {canCreateTeam ? (
+            <Link
+              href="/teams"
+              className="text-sm font-semibold text-white tracking-tight truncate hidden sm:inline hover:text-white/80 transition-colors"
+            >
+              UFTech Tasks
+            </Link>
+          ) : (
+            <span className="text-sm font-semibold text-white tracking-tight truncate hidden sm:inline">
+              UFTech Tasks
+            </span>
+          )}
           <span className="text-[10px] font-medium text-muted uppercase tracking-wider border border-border rounded-full px-2.5 py-1 truncate max-w-[140px] sm:max-w-[200px]">
             {teamName}
           </span>
@@ -135,11 +145,27 @@ export function AppNavbar({ teamName, userName, userEmail }: AppNavbarProps) {
                   {userEmail}
                 </p>
               </div>
+              {canCreateTeam && (
+                <Link
+                  href="/teams"
+                  role="menuitem"
+                  onClick={() => setAccountOpen(false)}
+                  className="mt-1 flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] font-medium text-foreground hover:bg-white/[0.06] cursor-pointer"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted" aria-hidden>
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                  Manage Teams
+                </Link>
+              )}
               <button
                 type="button"
                 role="menuitem"
                 onClick={() => handleLogout()}
-                className="mt-1 w-full px-3 py-2.5 text-left text-[13px] font-medium text-foreground hover:bg-white/[0.06] cursor-pointer"
+                className={`${canCreateTeam ? "" : "mt-1 "}w-full px-3 py-2.5 text-left text-[13px] font-medium text-foreground hover:bg-white/[0.06] cursor-pointer`}
               >
                 Log out
               </button>

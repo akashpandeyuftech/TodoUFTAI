@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/app/lib/auth/jwt";
 import { db } from "@/app/lib/db";
 import { users, teams } from "@/app/lib/db/schema";
+import { emailCanCreateTeams } from "@/app/lib/config/team-creators";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AppShell } from "./app-shell";
@@ -20,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-[100dvh] flex-col overflow-hidden">
-      <AppShell teamName={teamName} userName={user.displayName} userEmail={user.email}>
+      <AppShell teamName={teamName} userName={user.displayName} userEmail={user.email} canCreateTeam={emailCanCreateTeams(user.email)}>
         {children}
       </AppShell>
     </div>

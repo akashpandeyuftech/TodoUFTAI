@@ -89,6 +89,42 @@ export async function createTeam(formData: FormData) {
     };
   }
 
+  const [nameTaken] = await db.select({ id: teams.id }).from(teams).where(eq(teams.name, parsed.data.name)).limit(1);
+  if (nameTaken) {
+    return { error: "That team name is already taken. Pick another." };
+  }
+
+  await db
+    .insert(teams)
+    .values({
+      name: parsed.data.name,
+      description: parsed.data.description,
+    })
+    .returning();
+
+  revalidatePath("/join-team");
+  revalidatePath("/teams");
+  return { success: true };
+}
+
+export async function createAndJoinTeam(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  if (!emailCanCreateTeams(user.email)) {
+    return { error: "Creating teams is not enabled for your account." };
+  }
+
+  const parsed = createTeamSchema.safeParse({
+    name: (formData.get("name") as string)?.trim(),
+    description: (formData.get("description") as string)?.trim() || null,
+  });
+  if (!parsed.success) {
+    return {
+      error: "Invalid details",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
   const [dbUser] = await db.select().from(users).where(eq(users.id, user.userId)).limit(1);
   if (!dbUser) redirect("/login");
   if (dbUser.teamId) {
@@ -117,6 +153,7 @@ export async function createTeam(formData: FormData) {
   });
 
   revalidatePath("/join-team");
+  revalidatePath("/teams");
   revalidatePath("/dashboard");
   redirect("/dashboard");
 }
@@ -131,4 +168,9 @@ export async function getTeamMembers(teamId: string) {
     })
     .from(users)
     .where(eq(users.teamId, teamId));
+}
+
+export async function getTeamById(teamId: string) {
+  const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+  return team ?? null;
 }
