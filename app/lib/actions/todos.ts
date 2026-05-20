@@ -2,7 +2,7 @@
 
 import { db } from "../db";
 import { todos, users } from "../db/schema";
-import { eq, and, desc, asc, or, sql } from "drizzle-orm";
+import { eq, and, desc, asc, or, sql, aliasedTable } from "drizzle-orm";
 import { todoSchema, updateTodoSchema } from "../validators";
 import { getCurrentUser } from "../auth/jwt";
 import { recordHistory } from "./history";
@@ -18,6 +18,7 @@ function todoSnapshot(todo: Record<string, unknown>) {
     priority: todo.priority,
     ownerType: todo.ownerType,
     ownerId: todo.ownerId,
+    claimedByUserId: todo.claimedByUserId ?? null,
   };
 }
 
@@ -55,6 +56,82 @@ export async function createTodo(formData: FormData) {
     .returning();
 
   await recordHistory(todo.id, user.userId, "created", null, todoSnapshot(todo as unknown as Record<string, unknown>));
+
+  revalidatePath("/my-todos");
+  revalidatePath("/team-todos");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function claimTeamTodo(todoId: string) {
+  const user = await getCurrentUser();
+  if (!user || !user.teamId) redirect("/login");
+
+  const [existing] = await db.select().from(todos).where(eq(todos.id, todoId)).limit(1);
+  if (!existing) return { error: "Todo not found" };
+
+  if (existing.ownerType !== "team" || existing.ownerId !== user.teamId) {
+    return { error: "Invalid task for your team" };
+  }
+
+  if (existing.claimedByUserId && existing.claimedByUserId !== user.userId) {
+    return { error: "Someone else already picked this task" };
+  }
+
+  if (existing.claimedByUserId === user.userId) return { success: true };
+
+  const prevSnapshot = todoSnapshot(existing as unknown as Record<string, unknown>);
+
+  const [updated] = await db
+    .update(todos)
+    .set({ claimedByUserId: user.userId, updatedAt: new Date() })
+    .where(eq(todos.id, todoId))
+    .returning();
+
+  await recordHistory(
+    todoId,
+    user.userId,
+    "claimed",
+    prevSnapshot,
+    todoSnapshot(updated as unknown as Record<string, unknown>)
+  );
+
+  revalidatePath("/my-todos");
+  revalidatePath("/team-todos");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function releaseTeamTodoClaim(todoId: string) {
+  const user = await getCurrentUser();
+  if (!user || !user.teamId) redirect("/login");
+
+  const [existing] = await db.select().from(todos).where(eq(todos.id, todoId)).limit(1);
+  if (!existing) return { error: "Todo not found" };
+
+  if (existing.ownerType !== "team" || existing.ownerId !== user.teamId) {
+    return { error: "Invalid task" };
+  }
+
+  if (existing.claimedByUserId !== user.userId) {
+    return { error: "Only whoever took this task can put it back" };
+  }
+
+  const prevSnapshot = todoSnapshot(existing as unknown as Record<string, unknown>);
+
+  const [updated] = await db
+    .update(todos)
+    .set({ claimedByUserId: null, updatedAt: new Date() })
+    .where(eq(todos.id, todoId))
+    .returning();
+
+  await recordHistory(
+    todoId,
+    user.userId,
+    "released",
+    prevSnapshot,
+    todoSnapshot(updated as unknown as Record<string, unknown>)
+  );
 
   revalidatePath("/my-todos");
   revalidatePath("/team-todos");
@@ -180,8 +257,15 @@ export async function deleteTodo(todoId: string) {
   return { success: true };
 }
 
-export async function getMyTodos(userId: string, filter?: string, sort?: string) {
-  let whereClause = and(eq(todos.ownerType, "member"), eq(todos.ownerId, userId));
+export async function getMyTodos(userId: string, teamId: string, filter?: string, sort?: string) {
+  const mine = and(eq(todos.ownerType, "member"), eq(todos.ownerId, userId));
+  const claimedFromTeam = and(
+    eq(todos.ownerType, "team"),
+    eq(todos.ownerId, teamId),
+    eq(todos.claimedByUserId, userId)
+  );
+
+  let whereClause = or(mine, claimedFromTeam);
 
   if (filter === "active") {
     whereClause = and(whereClause, eq(todos.isCompleted, false));
@@ -201,6 +285,8 @@ export async function getMyTodos(userId: string, filter?: string, sort?: string)
       orderBy = desc(todos.createdAt);
   }
 
+  const claimantUsers = aliasedTable(users, "claimant_my");
+
   return db
     .select({
       id: todos.id,
@@ -215,9 +301,12 @@ export async function getMyTodos(userId: string, filter?: string, sort?: string)
       createdAt: todos.createdAt,
       updatedAt: todos.updatedAt,
       creatorName: users.displayName,
+      claimedByUserId: todos.claimedByUserId,
+      claimantDisplayName: claimantUsers.displayName,
     })
     .from(todos)
     .leftJoin(users, eq(todos.createdBy, users.id))
+    .leftJoin(claimantUsers, eq(todos.claimedByUserId, claimantUsers.id))
     .where(whereClause)
     .orderBy(orderBy);
 }
@@ -243,6 +332,8 @@ export async function getTeamTodos(teamId: string, filter?: string, sort?: strin
       orderBy = desc(todos.createdAt);
   }
 
+  const claimantUsers = aliasedTable(users, "claimant_team");
+
   return db
     .select({
       id: todos.id,
@@ -257,9 +348,12 @@ export async function getTeamTodos(teamId: string, filter?: string, sort?: strin
       createdAt: todos.createdAt,
       updatedAt: todos.updatedAt,
       creatorName: users.displayName,
+      claimedByUserId: todos.claimedByUserId,
+      claimantDisplayName: claimantUsers.displayName,
     })
     .from(todos)
     .leftJoin(users, eq(todos.createdBy, users.id))
+    .leftJoin(claimantUsers, eq(todos.claimedByUserId, claimantUsers.id))
     .where(whereClause)
     .orderBy(orderBy);
 }
@@ -290,15 +384,24 @@ export async function getMemberTodos(memberId: string, teamId: string) {
 }
 
 export async function getDashboardStats(userId: string, teamId: string) {
+  const mineOrClaimed = or(
+    and(eq(todos.ownerType, "member"), eq(todos.ownerId, userId)),
+    and(
+      eq(todos.ownerType, "team"),
+      eq(todos.ownerId, teamId),
+      eq(todos.claimedByUserId, userId)
+    )
+  );
+
   const myTodosResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(todos)
-    .where(and(eq(todos.ownerType, "member"), eq(todos.ownerId, userId)));
+    .where(mineOrClaimed);
 
   const myCompletedResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(todos)
-    .where(and(eq(todos.ownerType, "member"), eq(todos.ownerId, userId), eq(todos.isCompleted, true)));
+    .where(and(mineOrClaimed, eq(todos.isCompleted, true)));
 
   const teamTodosResult = await db
     .select({ count: sql<number>`count(*)` })
@@ -340,7 +443,11 @@ export async function getExportData(params: {
   } = {};
 
   if (params.includeMyTodos) {
-    result.myTodos = await getMyTodos(params.userId, params.myTodosFilter === "both" ? undefined : params.myTodosFilter);
+    result.myTodos = await getMyTodos(
+      params.userId,
+      params.teamId,
+      params.myTodosFilter === "both" ? undefined : params.myTodosFilter
+    );
   }
 
   if (params.includeTeamTodos) {

@@ -12,9 +12,12 @@ interface Todo {
   dueDate: string | Date | null;
   priority: "low" | "medium" | "high";
   ownerType: "member" | "team";
+  ownerId: string;
+  createdBy?: string;
   creatorName: string | null;
-  createdAt: string | Date;
-  updatedAt: string | Date;
+  claimedByUserId?: string | null;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 interface TodoCardProps {
@@ -22,15 +25,26 @@ interface TodoCardProps {
   onEdit?: (todo: Todo) => void;
   canDelete?: boolean;
   showCreator?: boolean;
+  /** Small pill under title area */
+  badge?: string;
+  /** Shown instead of inferred creator line when set */
+  takenByLabel?: string;
 }
 
 const priorityConfig = {
-  high: { bg: "bg-red-500/10", text: "text-red-400", dot: "bg-red-400" },
-  medium: { bg: "bg-amber-500/10", text: "text-amber-400", dot: "bg-amber-400" },
-  low: { bg: "bg-emerald-500/10", text: "text-emerald-400", dot: "bg-emerald-400" },
+  high: { bg: "bg-white/10", text: "text-foreground", dot: "bg-white" },
+  medium: { bg: "bg-white/[0.06]", text: "text-muted", dot: "bg-muted" },
+  low: { bg: "bg-white/[0.04]", text: "text-muted", dot: "bg-border" },
 };
 
-export function TodoCard({ todo, onEdit, canDelete = true, showCreator = false }: TodoCardProps) {
+export function TodoCard({
+  todo,
+  onEdit,
+  canDelete = true,
+  showCreator = false,
+  badge,
+  takenByLabel,
+}: TodoCardProps) {
   const [optimisticCompleted, setOptimisticCompleted] = useState(todo.isCompleted);
   const [isPending, startTransition] = useTransition();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -102,10 +116,19 @@ export function TodoCard({ todo, onEdit, canDelete = true, showCreator = false }
             </span>
 
             {dueDate && (
-              <span className={`text-[11px] ${isOverdue ? "text-red-400 font-semibold" : "text-muted"}`}>
-                {isOverdue ? "Overdue: " : "Due: "}{dueDate.toLocaleDateString()}
+              <span className={`text-[11px] ${isOverdue ? "text-danger font-semibold" : "text-muted"}`}>
+                {isOverdue ? "Overdue: " : "Due: "}
+                {dueDate.toLocaleDateString()}
               </span>
             )}
+
+            {badge && (
+              <span className="text-[10px] font-medium uppercase tracking-wide text-muted border border-border rounded px-2 py-0.5">
+                {badge}
+              </span>
+            )}
+
+            {takenByLabel && <span className="text-[11px] text-foreground">{takenByLabel}</span>}
 
             {showCreator && todo.creatorName && (
               <span className="text-[11px] text-muted">by {todo.creatorName}</span>

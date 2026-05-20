@@ -17,9 +17,8 @@ interface Todo {
   dueDate: string | Date | null;
   priority: "low" | "medium" | "high";
   ownerType: "member" | "team";
+  ownerId: string;
   creatorName: string | null;
-  createdAt: string | Date;
-  updatedAt: string | Date;
 }
 
 interface MembersClientProps {

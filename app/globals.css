@@ -1,22 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0f0f13;
-  --foreground: #e4e4e7;
-  --primary: #6366f1;
-  --primary-hover: #818cf8;
-  --danger: #ef4444;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --muted: #71717a;
-  --border: #27272a;
-  --card: #18181b;
-  --card-hover: #1f1f23;
-  --sidebar: #0c0c0f;
-  --sidebar-text: #a1a1aa;
-  --sidebar-active: #6366f1;
-  --surface: #1c1c21;
-  --accent: #a78bfa;
+  --background: #111111;
+  --foreground: #f0f0f0;
+  --primary: #ffffff;
+  --primary-hover: #e0e0e0;
+  --danger: #ff4444;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --muted: #777777;
+  --border: #252525;
+  --card: #191919;
+  --card-hover: #1f1f1f;
+  --surface: #161616;
+  --accent: #999999;
+  --nav: #141414;
+  /* Legacy Tailwind aliases (sidebar removed in favor of top nav) */
+  --sidebar: #141414;
+  --sidebar-text: #777777;
 }
 
 @theme inline {
@@ -31,28 +32,27 @@
   --color-border: var(--border);
   --color-card: var(--card);
   --color-card-hover: var(--card-hover);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-text: var(--sidebar-text);
-  --color-sidebar-active: var(--sidebar-active);
   --color-surface: var(--surface);
   --color-accent: var(--accent);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-nav: var(--nav);
+  --color-sidebar: var(--sidebar);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #27272a #0f0f13;
+  scrollbar-color: #252525 #111111;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Times New Roman", "Georgia", serif;
+  font-family: var(--font-sans), "Inter", -apple-system, sans-serif;
 }
 
 ::selection {
-  background: #6366f180;
+  background: #ffffff30;
   color: #fff;
 }
 
@@ -62,11 +62,6 @@ body {
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
-  50% { box-shadow: 0 0 20px 2px rgba(99, 102, 241, 0.15); }
 }

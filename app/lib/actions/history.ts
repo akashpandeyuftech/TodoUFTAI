@@ -4,7 +4,14 @@ import { db } from "../db";
 import { todoHistory, todos, users } from "../db/schema";
 import { eq, desc, and, or, sql } from "drizzle-orm";
 
-type HistoryAction = "created" | "updated" | "completed" | "uncompleted" | "deleted";
+type HistoryAction =
+  | "created"
+  | "updated"
+  | "completed"
+  | "uncompleted"
+  | "deleted"
+  | "claimed"
+  | "released";
 
 export async function recordHistory(
   todoId: string,
@@ -39,11 +46,17 @@ export async function getHistory(filters: {
     const userTodoIds = db
       .select({ id: todos.id })
       .from(todos)
-      .where(and(eq(todos.ownerType, "member"), eq(todos.ownerId, userId)));
-    whereClause = or(
-      sql`${todoHistory.todoId} IN (${userTodoIds})`,
-      eq(todoHistory.changedBy, userId)
-    );
+      .where(
+        or(
+          and(eq(todos.ownerType, "member"), eq(todos.ownerId, userId)),
+          and(
+            eq(todos.ownerType, "team"),
+            eq(todos.ownerId, teamId),
+            eq(todos.claimedByUserId, userId)
+          )
+        )
+      );
+    whereClause = or(sql`${todoHistory.todoId} IN (${userTodoIds})`, eq(todoHistory.changedBy, userId));
   } else if (mode === "team") {
     const teamTodoIds = db
       .select({ id: todos.id })

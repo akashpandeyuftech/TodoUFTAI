@@ -16,6 +16,8 @@ export const actionEnum = pgEnum("action", [
   "completed",
   "uncompleted",
   "deleted",
+  "claimed",
+  "released",
 ]);
 
 export const teams = pgTable("teams", {
@@ -43,6 +45,8 @@ export const todos = pgTable("todos", {
   priority: priorityEnum("priority").default("medium").notNull(),
   ownerType: ownerTypeEnum("owner_type").notNull(),
   ownerId: uuid("owner_id").notNull(),
+  /** When set, this team-owned todo appears in this member's list and shows as taken by them on the team board. */
+  claimedByUserId: uuid("claimed_by_user_id").references(() => users.id),
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),

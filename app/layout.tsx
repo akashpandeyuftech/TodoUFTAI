@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Source_Code_Pro } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const serif = Playfair_Display({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
-const mono = Source_Code_Pro({
-  variable: "--font-geist-mono",
+const jetbrains = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
 });
 
@@ -24,11 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${serif.variable} ${mono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-background text-foreground">{children}</body>
+    <html lang="en" className={`${inter.variable} ${jetbrains.variable} h-full`}>
+      <body className="min-h-full flex flex-col bg-background text-foreground antialiased">{children}</body>
     </html>
   );
 }

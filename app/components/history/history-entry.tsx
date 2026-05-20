@@ -11,11 +11,13 @@ interface HistoryEntryProps {
 }
 
 const actionLabels: Record<string, { label: string; color: string }> = {
-  created: { label: "Created", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
-  updated: { label: "Updated", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
-  completed: { label: "Completed", color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
-  uncompleted: { label: "Uncompleted", color: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
-  deleted: { label: "Deleted", color: "bg-red-500/10 text-red-400 border-red-500/20" },
+  created: { label: "Created", color: "bg-white/[0.08] text-foreground border-border" },
+  updated: { label: "Updated", color: "bg-white/[0.06] text-muted border-border" },
+  completed: { label: "Completed", color: "bg-white/[0.08] text-foreground border-border" },
+  uncompleted: { label: "Uncompleted", color: "bg-white/[0.06] text-muted border-border" },
+  deleted: { label: "Deleted", color: "bg-danger/10 text-danger border-danger/25" },
+  claimed: { label: "Taken", color: "bg-white/[0.06] text-foreground border-border" },
+  released: { label: "Returned to pool", color: "bg-white/[0.04] text-muted border-border" },
 };
 
 export function HistoryEntry({ entry }: HistoryEntryProps) {

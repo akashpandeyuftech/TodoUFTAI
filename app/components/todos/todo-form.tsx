@@ -12,6 +12,7 @@ interface TodoFormProps {
     description: string | null;
     dueDate: string | Date | null;
     priority: "low" | "medium" | "high";
+    ownerType?: "member" | "team";
   } | null;
   onCancel?: () => void;
   onSuccess?: () => void;
@@ -28,7 +29,8 @@ export function TodoForm({ ownerType, editingTodo, onCancel, onSuccess }: TodoFo
   }, [editingTodo]);
 
   function handleSubmit(formData: FormData) {
-    formData.set("owner_type", ownerType);
+    const effectiveOwner = editingTodo?.ownerType ?? ownerType;
+    formData.set("owner_type", effectiveOwner);
     startTransition(async () => {
       let result;
       if (editingTodo) {
@@ -50,7 +52,8 @@ export function TodoForm({ ownerType, editingTodo, onCancel, onSuccess }: TodoFo
     ? new Date(editingTodo.dueDate).toISOString().split("T")[0]
     : "";
 
-  const inputClass = "w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50";
+  const inputClass =
+    "w-full px-3 py-2 bg-[#111] border border-border rounded-lg text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-white/25";
 
   return (
     <form ref={formRef} action={handleSubmit} className="bg-surface border border-border rounded-xl p-4 space-y-4">
@@ -98,7 +101,7 @@ export function TodoForm({ ownerType, editingTodo, onCancel, onSuccess }: TodoFo
         <button
           type="submit"
           disabled={isPending}
-          className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-hover disabled:opacity-50 cursor-pointer transition-colors"
+          className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-white/90 disabled:opacity-50 cursor-pointer transition-colors"
         >
           {isPending ? "Saving..." : editingTodo ? "Update" : "Add Task"}
         </button>

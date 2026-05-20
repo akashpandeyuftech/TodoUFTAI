@@ -28,3 +28,8 @@ export const updateTodoSchema = todoSchema.partial().extend({
 export const joinTeamSchema = z.object({
   team_id: z.string().uuid(),
 });
+
+export const createTeamSchema = z.object({
+  name: z.string().min(2, "Name too short").max(80),
+  description: z.string().max(500).optional().nullable(),
+});

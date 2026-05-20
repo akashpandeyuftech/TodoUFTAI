@@ -15,7 +15,7 @@ export default async function MyTodosPage({ searchParams }: Props) {
   const filter = params.filter ?? "all";
   const sort = params.sort ?? "created";
 
-  const todos = await getMyTodos(user.userId, filter === "all" ? undefined : filter, sort);
+  const todos = await getMyTodos(user.userId, user.teamId, filter === "all" ? undefined : filter, sort);
 
   return (
     <div className="max-w-3xl">

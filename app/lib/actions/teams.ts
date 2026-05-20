@@ -3,8 +3,9 @@
 import { db } from "../db";
 import { teams, users } from "../db/schema";
 import { eq, sql } from "drizzle-orm";
-import { joinTeamSchema } from "../validators";
+import { joinTeamSchema, createTeamSchema } from "../validators";
 import { getCurrentUser, setAuthCookie } from "../auth/jwt";
+import { emailCanCreateTeams } from "../config/team-creators";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -67,6 +68,56 @@ export async function joinTeam(formData: FormData) {
   });
 
   revalidatePath("/");
+  redirect("/dashboard");
+}
+
+export async function createTeam(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  if (!emailCanCreateTeams(user.email)) {
+    return { error: "Creating teams is not enabled for your account." };
+  }
+
+  const parsed = createTeamSchema.safeParse({
+    name: (formData.get("name") as string)?.trim(),
+    description: (formData.get("description") as string)?.trim() || null,
+  });
+  if (!parsed.success) {
+    return {
+      error: "Invalid details",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const [dbUser] = await db.select().from(users).where(eq(users.id, user.userId)).limit(1);
+  if (!dbUser) redirect("/login");
+  if (dbUser.teamId) {
+    return { error: "You already belong to a team." };
+  }
+
+  const [nameTaken] = await db.select({ id: teams.id }).from(teams).where(eq(teams.name, parsed.data.name)).limit(1);
+  if (nameTaken) {
+    return { error: "That team name is already taken. Pick another." };
+  }
+
+  const [createdTeam] = await db
+    .insert(teams)
+    .values({
+      name: parsed.data.name,
+      description: parsed.data.description,
+    })
+    .returning();
+
+  await db.update(users).set({ teamId: createdTeam!.id }).where(eq(users.id, user.userId));
+
+  await setAuthCookie({
+    userId: user.userId,
+    email: user.email,
+    teamId: createdTeam!.id,
+  });
+
+  revalidatePath("/join-team");
+  revalidatePath("/dashboard");
   redirect("/dashboard");
 }
 

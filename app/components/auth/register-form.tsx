@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const inputClass = "w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50";
+const inputClass =
+  "w-full px-3 py-2.5 bg-[#111] border border-border rounded-lg text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-white/25";
 
 export function RegisterForm() {
   const [error, setError] = useState("");
@@ -48,30 +49,30 @@ export function RegisterForm() {
         <div className="bg-danger/10 text-danger text-sm px-4 py-3 rounded-lg border border-danger/20">{error}</div>
       )}
       <div>
-        <label className="block text-[12px] font-medium text-muted mb-1.5 uppercase tracking-wider">Display Name</label>
+        <label className="block text-[11px] font-medium text-muted mb-1.5 uppercase tracking-widest">Display Name</label>
         <input name="display_name" placeholder="Your name" required minLength={2} maxLength={50} className={inputClass} />
         {fieldErrors.display_name && <p className="text-danger text-xs mt-1">{fieldErrors.display_name[0]}</p>}
       </div>
       <div>
-        <label className="block text-[12px] font-medium text-muted mb-1.5 uppercase tracking-wider">Email</label>
+        <label className="block text-[11px] font-medium text-muted mb-1.5 uppercase tracking-widest">Email</label>
         <input name="email" type="email" placeholder="you@uftech.com" required className={inputClass} />
         {fieldErrors.email && <p className="text-danger text-xs mt-1">{fieldErrors.email[0]}</p>}
       </div>
       <div>
-        <label className="block text-[12px] font-medium text-muted mb-1.5 uppercase tracking-wider">Password</label>
+        <label className="block text-[11px] font-medium text-muted mb-1.5 uppercase tracking-widest">Password</label>
         <input name="password" type="password" required minLength={8} className={inputClass} />
         {fieldErrors.password && <p className="text-danger text-xs mt-1">{fieldErrors.password[0]}</p>}
       </div>
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-hover disabled:opacity-50 cursor-pointer transition-colors"
+        className="w-full bg-white text-black py-2.5 rounded-lg text-sm font-semibold hover:bg-white/90 disabled:opacity-50 cursor-pointer transition-colors"
       >
         {loading ? "Creating account..." : "Create Account"}
       </button>
-      <p className="text-center text-sm text-muted">
+      <p className="text-center text-xs text-muted">
         Already have an account?{" "}
-        <Link href="/login" className="text-primary font-medium hover:underline">Sign in</Link>
+        <Link href="/login" className="text-white font-medium hover:underline">Sign in</Link>
       </p>
     </form>
   );

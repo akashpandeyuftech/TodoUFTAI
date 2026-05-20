@@ -14,6 +14,7 @@ interface Todo {
   ownerId: string;
   createdBy: string;
   creatorName: string | null;
+  claimedByUserId?: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -32,6 +33,7 @@ export function MyTodosClient({ todos, filter, sort }: { todos: Todo[]; filter: 
     <TodoList
       todos={todos}
       ownerType="member"
+      resolveCanDelete={(todo) => !(todo.ownerType === "team" && !!todo.claimedByUserId)}
       filter={filter}
       sort={sort}
       onFilterChange={(f) => updateParam("filter", f)}

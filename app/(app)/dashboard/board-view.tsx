@@ -1,9 +1,15 @@
 "use client";
 
+import type { DragEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useTransition, useState } from "react";
 import { TodoCard } from "@/app/components/todos/todo-card";
+import { TodoForm } from "@/app/components/todos/todo-form";
 import Link from "next/link";
+import { claimTeamTodo, releaseTeamTodoClaim } from "@/app/lib/actions/todos";
+import { useToast } from "@/app/components/ui/toast";
 
-interface Todo {
+export interface DashboardTodo {
   id: string;
   title: string;
   description: string | null;
@@ -16,141 +22,318 @@ interface Todo {
   creatorName: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
+  claimedByUserId: string | null;
+  claimantDisplayName: string | null;
 }
 
 interface BoardViewProps {
-  myTodos: Todo[];
-  teamTodos: Todo[];
+  myTodos: DashboardTodo[];
+  teamTodos: DashboardTodo[];
   memberCount: number;
   userId: string;
 }
 
-export function BoardView({ myTodos, teamTodos, memberCount }: BoardViewProps) {
+const DND_TEAM = "board/todo";
+const TEAM_UNCLAIMED = "team/unclaimed";
+const TEAM_MY_CLAIM = "team/my-claim";
+
+export function BoardView({ myTodos, teamTodos, memberCount, userId }: BoardViewProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [dragOverMy, setDragOverMy] = useState(false);
+  const [dragOverTeam, setDragOverTeam] = useState(false);
+  const [, startTransition] = useTransition();
+  const [showPersonalForm, setShowPersonalForm] = useState(false);
+  const [showTeamForm, setShowTeamForm] = useState(false);
+
   const myActive = myTodos.filter((t) => !t.isCompleted);
   const myDone = myTodos.filter((t) => t.isCompleted);
   const teamActive = teamTodos.filter((t) => !t.isCompleted);
   const teamDone = teamTodos.filter((t) => t.isCompleted);
 
+  function persistDrag(kind: typeof TEAM_UNCLAIMED | typeof TEAM_MY_CLAIM, todoId: string) {
+    if (kind === TEAM_UNCLAIMED) {
+      startTransition(async () => {
+        const r = await claimTeamTodo(todoId);
+        if (r?.error) toast(r.error, "error");
+        else router.refresh();
+      });
+      return;
+    }
+    startTransition(async () => {
+      const r = await releaseTeamTodoClaim(todoId);
+      if (r?.error) toast(r.error, "error");
+      else router.refresh();
+    });
+  }
+
+  function onDragStartTeam(e: DragEvent, todo: DashboardTodo, from: "team" | "my") {
+    if (todo.ownerType !== "team") return;
+    if (from === "team") {
+      if (todo.claimedByUserId && todo.claimedByUserId !== userId) {
+        e.preventDefault();
+        return;
+      }
+      const kind =
+        todo.claimedByUserId === userId ? TEAM_MY_CLAIM : TEAM_UNCLAIMED;
+      e.dataTransfer.setData(DND_TEAM, JSON.stringify({ todoId: todo.id, kind }));
+      e.dataTransfer.effectAllowed = "move";
+    } else {
+      const isMine =
+        todo.claimedByUserId === userId && todo.ownerType === "team";
+      if (!isMine) return;
+      e.dataTransfer.setData(DND_TEAM, JSON.stringify({ todoId: todo.id, kind: TEAM_MY_CLAIM }));
+      e.dataTransfer.effectAllowed = "move";
+    }
+  }
+
+  function parseDropPayload(e: DragEvent) {
+    const raw = e.dataTransfer.getData(DND_TEAM);
+    if (!raw) return null;
+    try {
+      const p = JSON.parse(raw) as { todoId?: string; kind?: string };
+      if (!p.todoId || (p.kind !== TEAM_UNCLAIMED && p.kind !== TEAM_MY_CLAIM)) return null;
+      return { todoId: p.todoId, kind: p.kind as typeof TEAM_UNCLAIMED | typeof TEAM_MY_CLAIM };
+    } catch {
+      return null;
+    }
+  }
+
+  function onDropMy(e: DragEvent) {
+    e.preventDefault();
+    setDragOverMy(false);
+    const p = parseDropPayload(e);
+    if (!p) return;
+    if (p.kind !== TEAM_UNCLAIMED) return;
+    persistDrag(TEAM_UNCLAIMED, p.todoId);
+  }
+
+  function onDropTeam(e: DragEvent) {
+    e.preventDefault();
+    setDragOverTeam(false);
+    const p = parseDropPayload(e);
+    if (!p) return;
+    if (p.kind !== TEAM_MY_CLAIM) return;
+    persistDrag(TEAM_MY_CLAIM, p.todoId);
+  }
+
   return (
     <div className="h-full">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Board</h1>
-        <div className="flex items-center gap-3 text-xs text-muted">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">Board</h1>
+          <p className="text-[13px] text-muted mt-1">
+            Drag a team task into <span className="text-foreground font-medium">My Tasks</span> to pick it up. Drag it back to Team Tasks to return it.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 text-[11px] text-muted shrink-0">
+          <span className="bg-surface px-3 py-1.5 rounded-lg border border-border">{memberCount} members</span>
           <span className="bg-surface px-3 py-1.5 rounded-lg border border-border">
-            {memberCount} members
-          </span>
-          <span className="bg-surface px-3 py-1.5 rounded-lg border border-border">
-            {myTodos.length + teamTodos.length} total tasks
+            {myTodos.length + teamTodos.length} tasks
           </span>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-5 h-[calc(100%-4rem)]">
-        {/* MY TASKS COLUMN */}
-        <div className="bg-surface rounded-2xl border border-border p-4 flex flex-col min-h-0">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary" />
-              <h2 className="text-sm font-bold tracking-wide uppercase text-muted">My Tasks</h2>
-              <span className="text-[11px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-semibold">
-                {myActive.length}
-              </span>
-            </div>
-            <Link
-              href="/my-todos"
-              className="text-[11px] text-muted hover:text-primary transition-colors"
-            >
-              View all →
-            </Link>
-          </div>
+      <div className="grid lg:grid-cols-2 gap-5 h-[calc(100%-5.5rem)] min-h-[320px]">
+        <section
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOverMy(true);
+          }}
+          onDragLeave={() => setDragOverMy(false)}
+          onDrop={onDropMy}
+          className={`bg-surface rounded-2xl border p-4 flex flex-col min-h-0 transition-colors ${
+            dragOverMy ? "border-white/35 ring-1 ring-white/15" : "border-border"
+          }`}
+        >
+          <MyColumnHeader activeCount={myActive.length} onAdd={() => setShowPersonalForm((v) => !v)} />
 
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+          {(showPersonalForm) && (
+            <div className="mb-3 animate-[fade-in_0.15s_ease-out]">
+              <TodoForm
+                ownerType="member"
+                onCancel={() => setShowPersonalForm(false)}
+                onSuccess={() => {
+                  setShowPersonalForm(false);
+                  router.refresh();
+                }}
+              />
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1 pt-2">
             {myActive.length === 0 && myDone.length === 0 ? (
-              <EmptyColumn label="personal" href="/my-todos" />
+              <EmptyColumn label="personal tasks" />
             ) : (
               <>
                 {myActive.map((todo) => (
-                  <TodoCard key={todo.id} todo={todo} canDelete={false} />
+                  <div
+                    key={todo.id}
+                    draggable={
+                      !!(todo.ownerType === "team" && todo.claimedByUserId === userId)
+                    }
+                    onDragStart={(e) => onDragStartTeam(e, todo, "my")}
+                    className={`${
+                      todo.ownerType === "team" && todo.claimedByUserId === userId ? "cursor-grab active:cursor-grabbing" : ""
+                    }`}
+                  >
+                    <TodoCard
+                      todo={todo}
+                      canDelete={!(todo.ownerType === "team" && !!todo.claimedByUserId)}
+                      badge={todo.ownerType === "team" ? "Team — picked up by you" : undefined}
+                      showCreator={false}
+                    />
+                  </div>
                 ))}
                 {myDone.length > 0 && (
                   <>
                     <div className="flex items-center gap-2 pt-3 pb-1">
                       <div className="h-px flex-1 bg-border" />
-                      <span className="text-[10px] text-muted uppercase tracking-wider">
-                        Completed ({myDone.length})
-                      </span>
+                      <span className="text-[10px] text-muted uppercase tracking-wider">Completed ({myDone.length})</span>
                       <div className="h-px flex-1 bg-border" />
                     </div>
                     {myDone.map((todo) => (
-                      <TodoCard key={todo.id} todo={todo} canDelete={false} />
+                      <TodoCard key={todo.id} todo={todo} canDelete={!(todo.ownerType === "team" && !!todo.claimedByUserId)} badge={todo.ownerType === "team" ? "Team" : undefined} />
                     ))}
                   </>
                 )}
               </>
             )}
           </div>
-        </div>
+        </section>
 
-        {/* TEAM TASKS COLUMN */}
-        <div className="bg-surface rounded-2xl border border-border p-4 flex flex-col min-h-0">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-accent" />
-              <h2 className="text-sm font-bold tracking-wide uppercase text-muted">Team Tasks</h2>
-              <span className="text-[11px] bg-accent/15 text-accent px-2 py-0.5 rounded-full font-semibold">
-                {teamActive.length}
-              </span>
+        <section
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOverTeam(true);
+          }}
+          onDragLeave={() => setDragOverTeam(false)}
+          onDrop={onDropTeam}
+          className={`bg-surface rounded-2xl border p-4 flex flex-col min-h-0 transition-colors ${
+            dragOverTeam ? "border-white/35 ring-1 ring-white/15" : "border-border"
+          }`}
+        >
+          <TeamColumnHeader activeCount={teamActive.length} onAdd={() => setShowTeamForm((v) => !v)} />
+
+          {showTeamForm && (
+            <div className="mb-3 animate-[fade-in_0.15s_ease-out]">
+              <TodoForm
+                ownerType="team"
+                onCancel={() => setShowTeamForm(false)}
+                onSuccess={() => {
+                  setShowTeamForm(false);
+                  router.refresh();
+                }}
+              />
             </div>
-            <Link
-              href="/team-todos"
-              className="text-[11px] text-muted hover:text-accent transition-colors"
-            >
-              View all →
-            </Link>
-          </div>
+          )}
 
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1 pt-2">
             {teamActive.length === 0 && teamDone.length === 0 ? (
-              <EmptyColumn label="team" href="/team-todos" />
+              <EmptyColumn label="team tasks" />
             ) : (
               <>
                 {teamActive.map((todo) => (
-                  <TodoCard key={todo.id} todo={todo} canDelete={false} showCreator />
+                  <div
+                    key={todo.id}
+                    draggable={
+                      !todo.claimedByUserId || todo.claimedByUserId === userId
+                    }
+                    onDragStart={(e) => onDragStartTeam(e, todo, "team")}
+                    className={`${!todo.claimedByUserId || todo.claimedByUserId === userId ? "cursor-grab active:cursor-grabbing" : ""}`}
+                  >
+                    <TodoCard
+                      todo={todo}
+                      canDelete={false}
+                      showCreator
+                      takenByLabel={
+                        todo.claimantDisplayName
+                          ? todo.claimedByUserId === userId
+                            ? `Taken — you (${todo.claimantDisplayName})`
+                            : `Taken — ${todo.claimantDisplayName}`
+                          : undefined
+                      }
+                    />
+                  </div>
                 ))}
                 {teamDone.length > 0 && (
                   <>
                     <div className="flex items-center gap-2 pt-3 pb-1">
                       <div className="h-px flex-1 bg-border" />
-                      <span className="text-[10px] text-muted uppercase tracking-wider">
-                        Completed ({teamDone.length})
-                      </span>
+                      <span className="text-[10px] text-muted uppercase tracking-wider">Completed ({teamDone.length})</span>
                       <div className="h-px flex-1 bg-border" />
                     </div>
                     {teamDone.map((todo) => (
-                      <TodoCard key={todo.id} todo={todo} canDelete={false} showCreator />
+                      <TodoCard key={todo.id} todo={todo} canDelete={false} showCreator takenByLabel={todo.claimantDisplayName ? `Taken — ${todo.claimantDisplayName}` : undefined} />
                     ))}
                   </>
                 )}
               </>
             )}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
 }
 
-function EmptyColumn({ label, href }: { label: string; href: string }) {
+function MyColumnHeader({ activeCount, onAdd }: { activeCount: number; onAdd: () => void }) {
+  return (
+    <div className="flex items-center justify-between mb-2 gap-3 shrink-0">
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="w-2 h-2 rounded-full bg-white shrink-0" />
+        <h2 className="text-sm font-semibold tracking-wide uppercase text-muted truncate">My Tasks</h2>
+        <span className="text-[11px] bg-white/[0.08] text-foreground px-2 py-0.5 rounded-full font-medium border border-border">{activeCount}</span>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={onAdd}
+          className="text-[11px] px-3 py-1.5 rounded-lg border border-border bg-card text-foreground hover:bg-card-hover cursor-pointer transition-colors font-medium"
+        >
+          Add
+        </button>
+        <Link href="/my-todos" className="text-[11px] text-muted hover:text-white transition-colors whitespace-nowrap">
+          Full list →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function TeamColumnHeader({ activeCount, onAdd }: { activeCount: number; onAdd: () => void }) {
+  return (
+    <div className="flex items-center justify-between mb-2 gap-3 shrink-0">
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="w-2 h-2 rounded-full bg-muted shrink-0" />
+        <h2 className="text-sm font-semibold tracking-wide uppercase text-muted truncate">Team Tasks</h2>
+        <span className="text-[11px] bg-white/[0.06] text-muted px-2 py-0.5 rounded-full font-medium border border-border">{activeCount}</span>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={onAdd}
+          className="text-[11px] px-3 py-1.5 rounded-lg border border-border bg-card text-foreground hover:bg-card-hover cursor-pointer transition-colors font-medium"
+        >
+          Add
+        </button>
+        <Link href="/team-todos" className="text-[11px] text-muted hover:text-white transition-colors whitespace-nowrap">
+          Full list →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function EmptyColumn({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-muted">
       <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24" className="mb-3 opacity-30">
         <rect x="3" y="3" width="18" height="18" rx="3" />
         <path d="M12 8v8M8 12h8" />
       </svg>
-      <p className="text-sm">No {label} tasks yet</p>
-      <Link href={href} className="text-xs text-primary mt-2 hover:underline">
-        Create one →
-      </Link>
+      <p className="text-sm text-center px-4">Drop an unclaimed team task here from the right column, or add personal tasks with Add.</p>
+      <p className="text-xs mt-3 opacity-70">No {label} yet</p>
     </div>
   );
 }

@@ -13,8 +13,10 @@ interface Todo {
   priority: "low" | "medium" | "high";
   ownerType: "member" | "team";
   ownerId: string;
-  createdBy: string;
+  createdBy?: string;
   creatorName: string | null;
+  claimedByUserId?: string | null;
+  claimantDisplayName?: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -24,6 +26,8 @@ interface TodoListProps {
   ownerType: "member" | "team";
   canEdit?: boolean;
   canDelete?: boolean;
+  /** When set, overrides `canDelete` per row */
+  resolveCanDelete?: (todo: Todo) => boolean;
   showCreator?: boolean;
   showForm?: boolean;
   filter?: string;
@@ -37,6 +41,7 @@ export function TodoList({
   ownerType,
   canEdit = true,
   canDelete = true,
+  resolveCanDelete,
   showCreator = false,
   showForm = true,
   filter,
@@ -94,7 +99,12 @@ export function TodoList({
       )}
 
       {editingTodo && (
-        <TodoForm ownerType={ownerType} editingTodo={editingTodo} onCancel={() => setEditingTodo(null)} onSuccess={() => setEditingTodo(null)} />
+        <TodoForm
+          ownerType={editingTodo.ownerType}
+          editingTodo={editingTodo}
+          onCancel={() => setEditingTodo(null)}
+          onSuccess={() => setEditingTodo(null)}
+        />
       )}
 
       {todos.length === 0 ? (
@@ -109,7 +119,13 @@ export function TodoList({
               key={todo.id}
               todo={todo}
               onEdit={canEdit ? () => setEditingTodo(todo) : undefined}
-              canDelete={canDelete}
+              canDelete={resolveCanDelete ? resolveCanDelete(todo) : canDelete}
+              badge={!showCreator && todo.ownerType === "team" && todo.claimedByUserId ? "Team • picked up" : undefined}
+              takenByLabel={
+                showCreator && todo.ownerType === "team" && todo.claimedByUserId && todo.claimantDisplayName
+                  ? `Taken — ${todo.claimantDisplayName}`
+                  : undefined
+              }
               showCreator={showCreator}
             />
           ))}

@@ -19,8 +19,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <AppShell teamName={teamName} userName={user.displayName}>
-      {children}
-    </AppShell>
+    <div className="flex min-h-[100dvh] flex-col overflow-hidden">
+      <AppShell teamName={teamName} userName={user.displayName}>
+        {children}
+      </AppShell>
+    </div>
   );
 }

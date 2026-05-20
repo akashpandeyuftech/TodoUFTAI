@@ -9,7 +9,7 @@ export default async function DashboardPage() {
   if (!user || !user.teamId) redirect("/login");
 
   const [myTodos, teamTodos, members] = await Promise.all([
-    getMyTodos(user.userId),
+    getMyTodos(user.userId, user.teamId),
     getTeamTodos(user.teamId),
     getTeamMembers(user.teamId),
   ]);
