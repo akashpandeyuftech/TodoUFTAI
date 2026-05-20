@@ -41,21 +41,15 @@ npm run db:push
 
 This applies the schema (including `claimed_by_user_id` on todos and claim history actions).
 
-### 4. Optional seed script
-
-```bash
-npm run db:seed
-```
-
-Runs a no-op log only — register users in the app instead of relying on seeded dummy data.
-
-### 5. Run dev server
+### 4. Run dev server
 
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+There is **no seed script**: create users via **Register**, then use **Join team** / **Create team** (for emails in `TEAM_CREATOR_EMAILS`).
 
 ## Auth Rules
 
@@ -66,7 +60,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Features
 
-- **Top navbar** — Board, tasks, members, history, export; mobile menu for small screens
+- **Top navbar** — Board, tasks, members, history, export; **account menu** opens from your **name / avatar** and includes **Log out**
 - **Dashboard board** — Add personal tasks, add team tasks, drag **unclaimed** team tasks into **My Tasks** (pick them up); drag claimed tasks back onto **Team Tasks** (return to pool). Team column shows **Taken — {name}** when someone picked up a task
 - **Personal + team todos** — Full workflow with filtering and sorting on dedicated pages
 - **Member view** — See any team member's personal todos
@@ -88,8 +82,8 @@ app/
     auth/          — JWT helpers
     validators/    — Zod schemas
     actions/       — Server actions
-middleware.ts      — JWT route protection
-scripts/seed.ts    — Empty / informational only
+middleware.ts      — JWT route protection; fails closed if `JWT_SECRET` invalid
+instrumentation.ts — Logs missing `JWT_SECRET` / `DATABASE_URL` at startup
 drizzle.config.ts  — Drizzle Kit config
 ```
 
@@ -106,6 +100,8 @@ drizzle.config.ts  — Drizzle Kit config
 4. Run `npm run db:push` so production DB matches schema
 5. Deploy
 
+**Production defaults:** response headers include `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, and (in production only) `Strict-Transport-Security`. `JWT_SECRET` must be **at least 32 characters** or protected routes return `503`.
+
 ## npm Scripts
 
 | Script | Description |
@@ -115,4 +111,3 @@ drizzle.config.ts  — Drizzle Kit config
 | `npm run start` | Start production server |
 | `npm run db:push` | Push Drizzle schema to database |
 | `npm run db:studio` | Open Drizzle Studio |
-| `npm run db:seed` | No-op informational script |
