@@ -60,8 +60,8 @@ export function JoinTeamClient({ teams, canCreateTeams }: { teams: Team[]; canCr
             <div>
               <h2 className="text-sm font-semibold text-white">Create a team</h2>
               <p className="text-xs text-muted mt-1">
-                Who can create teams is controlled by{" "}
-                <code className="text-muted">TEAM_CREATOR_EMAILS</code> (comma-separated @uftech.com addresses on the server).
+                Primary org contact is always allowed; add more creators with{" "}
+                <code className="text-muted">TEAM_CREATOR_EMAILS</code> (comma-separated @uftech.com addresses).
               </p>
             </div>
             <button
@@ -107,7 +107,7 @@ export function JoinTeamClient({ teams, canCreateTeams }: { teams: Team[]; canCr
               <p className="text-sm mt-1">
                 {canCreateTeams
                   ? "Use the form above to create one."
-                  : "Ask an organizer to add their email to TEAM_CREATOR_EMAILS and bootstrap the first team."}
+                  : "Ask someone who may create teams to add the first team (see project README)."}
               </p>
             </div>
           ) : (

@@ -31,7 +31,7 @@ cp .env.local.example .env.local
 
 Fill in Neon database URLs, JWT secret, and app URL.
 
-**Team bootstrap:** Add one or more emails to `TEAM_CREATOR_EMAILS` (comma-separated, `@uftech.com`). Those users see **Create team** on the Join Team page. No IDs or accounts are hardcoded.
+**Team creators:** `akashpandey@uftech.com` is **always** allowed to create teams (see `app/lib/config/team-creators.ts`). Set `TEAM_CREATOR_EMAILS` to add **additional** @uftech.com addresses.
 
 ### 3. Push database schema
 
@@ -41,7 +41,15 @@ npm run db:push
 
 This applies the schema (including `claimed_by_user_id` on todos and claim history actions).
 
-### 4. Run dev server
+### 4. (Optional) Delete all rows in the database
+
+Destroys **all** teams, users, todos, and history — use to wipe leftover demo data. Requires `DATABASE_URL` in `.env.local`.
+
+```bash
+npm run db:clear-all
+```
+
+### 5. Run dev server
 
 ```bash
 npm run dev
@@ -49,7 +57,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-There is **no seed script**: create users via **Register**, then use **Join team** / **Create team** (for emails in `TEAM_CREATOR_EMAILS`).
+Register accounts in the app, then **Join team** or **Create team** (if your account may create teams).
 
 ## Auth Rules
 
@@ -64,7 +72,7 @@ There is **no seed script**: create users via **Register**, then use **Join team
 - **Dashboard board** — Add personal tasks, add team tasks, drag **unclaimed** team tasks into **My Tasks** (pick them up); drag claimed tasks back onto **Team Tasks** (return to pool). Team column shows **Taken — {name}** when someone picked up a task
 - **Personal + team todos** — Full workflow with filtering and sorting on dedicated pages
 - **Member view** — See any team member's personal todos
-- **Team creators** — Emails listed in `TEAM_CREATOR_EMAILS` may create teams (not hardcoded per person)
+- **Team creators** — `akashpandey@uftech.com` plus any emails in `TEAM_CREATOR_EMAILS`
 - **History** — Audit trail including **Taken** / **Returned to pool**
 - **PDF Export** — Cover page, todos, optional history
 
@@ -84,6 +92,7 @@ app/
     actions/       — Server actions
 middleware.ts      — JWT route protection; fails closed if `JWT_SECRET` invalid
 instrumentation.ts — Logs missing `JWT_SECRET` / `DATABASE_URL` at startup
+scripts/           — e.g. `clear-all-data.mjs` for full DB wipe (`npm run db:clear-all`)
 drizzle.config.ts  — Drizzle Kit config
 ```
 
@@ -96,7 +105,7 @@ drizzle.config.ts  — Drizzle Kit config
    - `DATABASE_URL_UNPOOLED` — Neon direct connection string
    - `JWT_SECRET` — 32+ char random string
    - `NEXT_PUBLIC_APP_URL` — Your deployed URL
-   - `TEAM_CREATOR_EMAILS` — Comma-separated @uftech.com addresses allowed to create teams
+   - `TEAM_CREATOR_EMAILS` — (Optional) Extra @uftech.com addresses allowed to create teams
 4. Run `npm run db:push` so production DB matches schema
 5. Deploy
 
@@ -111,3 +120,4 @@ drizzle.config.ts  — Drizzle Kit config
 | `npm run start` | Start production server |
 | `npm run db:push` | Push Drizzle schema to database |
 | `npm run db:studio` | Open Drizzle Studio |
+| `npm run db:clear-all` | Truncate **all** app tables (destructive); needs `DATABASE_URL` |
