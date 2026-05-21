@@ -51,20 +51,28 @@ export function BoardView({ myTodos, teamTodos, memberCount, userId }: BoardView
   const teamActive = teamTodos.filter((t) => !t.isCompleted);
   const teamDone = teamTodos.filter((t) => t.isCompleted);
 
-  function persistDrag(kind: typeof TEAM_UNCLAIMED | typeof TEAM_MY_CLAIM, todoId: string) {
-    if (kind === TEAM_UNCLAIMED) {
-      startTransition(async () => {
-        const r = await claimTeamTodo(todoId);
-        if (r?.error) toast(r.error, "error");
-        else router.refresh();
-      });
-      return;
-    }
+  function handleClaim(todoId: string) {
+    startTransition(async () => {
+      const r = await claimTeamTodo(todoId);
+      if (r?.error) toast(r.error, "error");
+      else router.refresh();
+    });
+  }
+
+  function handleRelease(todoId: string) {
     startTransition(async () => {
       const r = await releaseTeamTodoClaim(todoId);
       if (r?.error) toast(r.error, "error");
       else router.refresh();
     });
+  }
+
+  function persistDrag(kind: typeof TEAM_UNCLAIMED | typeof TEAM_MY_CLAIM, todoId: string) {
+    if (kind === TEAM_UNCLAIMED) {
+      handleClaim(todoId);
+      return;
+    }
+    handleRelease(todoId);
   }
 
   function onDragStartTeam(e: DragEvent, todo: DashboardTodo, from: "team" | "my") {
@@ -123,7 +131,7 @@ export function BoardView({ myTodos, teamTodos, memberCount, userId }: BoardView
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-white">Board</h1>
           <p className="text-[13px] text-muted mt-1">
-            Drag a team task into <span className="text-foreground font-medium">My Tasks</span> to pick it up. Drag it back to Team Tasks to return it.
+            Tap <span className="text-foreground font-medium">Take Task</span> to pick up a team task, or drag on desktop.
           </p>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-muted shrink-0">
@@ -134,7 +142,7 @@ export function BoardView({ myTodos, teamTodos, memberCount, userId }: BoardView
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-5 h-[calc(100%-5.5rem)] min-h-[320px]">
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-5 lg:h-[calc(100%-5.5rem)] min-h-[320px]">
         <section
           onDragOver={(e) => {
             e.preventDefault();
@@ -142,7 +150,7 @@ export function BoardView({ myTodos, teamTodos, memberCount, userId }: BoardView
           }}
           onDragLeave={() => setDragOverMy(false)}
           onDrop={onDropMy}
-          className={`bg-surface rounded-2xl border p-4 flex flex-col min-h-0 transition-colors ${
+          className={`bg-surface rounded-xl sm:rounded-2xl border p-3 sm:p-4 flex flex-col min-h-0 transition-colors ${
             dragOverMy ? "border-white/35 ring-1 ring-white/15" : "border-border"
           }`}
         >
@@ -161,30 +169,30 @@ export function BoardView({ myTodos, teamTodos, memberCount, userId }: BoardView
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1 pt-2">
+          <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 pt-1.5">
             {myActive.length === 0 && myDone.length === 0 ? (
               <EmptyColumn label="personal tasks" />
             ) : (
               <>
-                {myActive.map((todo) => (
-                  <div
-                    key={todo.id}
-                    draggable={
-                      !!(todo.ownerType === "team" && todo.claimedByUserId === userId)
-                    }
-                    onDragStart={(e) => onDragStartTeam(e, todo, "my")}
-                    className={`${
-                      todo.ownerType === "team" && todo.claimedByUserId === userId ? "cursor-grab active:cursor-grabbing" : ""
-                    }`}
-                  >
-                    <TodoCard
-                      todo={todo}
-                      canDelete={!(todo.ownerType === "team" && !!todo.claimedByUserId)}
-                      badge={todo.ownerType === "team" ? "Team — picked up by you" : undefined}
-                      showCreator={false}
-                    />
-                  </div>
-                ))}
+                {myActive.map((todo) => {
+                  const isClaimedTeamTask = todo.ownerType === "team" && todo.claimedByUserId === userId;
+                  return (
+                    <div
+                      key={todo.id}
+                      draggable={!!isClaimedTeamTask}
+                      onDragStart={(e) => onDragStartTeam(e, todo, "my")}
+                      className={`${isClaimedTeamTask ? "hidden-drag lg:cursor-grab lg:active:cursor-grabbing" : ""}`}
+                    >
+                      <TodoCard
+                        todo={todo}
+                        canDelete={!isClaimedTeamTask}
+                        badge={isClaimedTeamTask ? "Team" : undefined}
+                        showCreator={false}
+                        onRelease={isClaimedTeamTask ? () => handleRelease(todo.id) : undefined}
+                      />
+                    </div>
+                  );
+                })}
                 {myDone.length > 0 && (
                   <>
                     <div className="flex items-center gap-2 pt-3 pb-1">
@@ -209,7 +217,7 @@ export function BoardView({ myTodos, teamTodos, memberCount, userId }: BoardView
           }}
           onDragLeave={() => setDragOverTeam(false)}
           onDrop={onDropTeam}
-          className={`bg-surface rounded-2xl border p-4 flex flex-col min-h-0 transition-colors ${
+          className={`bg-surface rounded-xl sm:rounded-2xl border p-3 sm:p-4 flex flex-col min-h-0 transition-colors ${
             dragOverTeam ? "border-white/35 ring-1 ring-white/15" : "border-border"
           }`}
         >
@@ -228,34 +236,39 @@ export function BoardView({ myTodos, teamTodos, memberCount, userId }: BoardView
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1 pt-2">
+          <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 pt-1.5">
             {teamActive.length === 0 && teamDone.length === 0 ? (
               <EmptyColumn label="team tasks" />
             ) : (
               <>
-                {teamActive.map((todo) => (
-                  <div
-                    key={todo.id}
-                    draggable={
-                      !todo.claimedByUserId || todo.claimedByUserId === userId
-                    }
-                    onDragStart={(e) => onDragStartTeam(e, todo, "team")}
-                    className={`${!todo.claimedByUserId || todo.claimedByUserId === userId ? "cursor-grab active:cursor-grabbing" : ""}`}
-                  >
-                    <TodoCard
-                      todo={todo}
-                      canDelete={false}
-                      showCreator
-                      takenByLabel={
-                        todo.claimantDisplayName
-                          ? todo.claimedByUserId === userId
-                            ? `Taken — you (${todo.claimantDisplayName})`
-                            : `Taken — ${todo.claimantDisplayName}`
-                          : undefined
-                      }
-                    />
-                  </div>
-                ))}
+                {teamActive.map((todo) => {
+                  const unclaimed = !todo.claimedByUserId;
+                  const claimedByMe = todo.claimedByUserId === userId;
+                  const canDrag = unclaimed || claimedByMe;
+                  return (
+                    <div
+                      key={todo.id}
+                      draggable={canDrag}
+                      onDragStart={(e) => onDragStartTeam(e, todo, "team")}
+                      className={`${canDrag ? "hidden-drag lg:cursor-grab lg:active:cursor-grabbing" : ""}`}
+                    >
+                      <TodoCard
+                        todo={todo}
+                        canDelete={false}
+                        showCreator
+                        takenByLabel={
+                          todo.claimantDisplayName
+                            ? claimedByMe
+                              ? `Taken — you`
+                              : `Taken — ${todo.claimantDisplayName}`
+                            : undefined
+                        }
+                        onClaim={unclaimed ? () => handleClaim(todo.id) : undefined}
+                        onRelease={claimedByMe ? () => handleRelease(todo.id) : undefined}
+                      />
+                    </div>
+                  );
+                })}
                 {teamDone.length > 0 && (
                   <>
                     <div className="flex items-center gap-2 pt-3 pb-1">
@@ -332,7 +345,7 @@ function EmptyColumn({ label }: { label: string }) {
         <rect x="3" y="3" width="18" height="18" rx="3" />
         <path d="M12 8v8M8 12h8" />
       </svg>
-      <p className="text-sm text-center px-4">Drop an unclaimed team task here from the right column, or add personal tasks with Add.</p>
+      <p className="text-sm text-center px-4">Take a team task or add personal tasks with Add.</p>
       <p className="text-xs mt-3 opacity-70">No {label} yet</p>
     </div>
   );

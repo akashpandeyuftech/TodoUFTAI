@@ -113,7 +113,7 @@ export function TodoList({
           <p className="text-sm mt-1">Create your first one above</p>
         </div>
       ) : (
-        <div className="grid gap-2">
+        <div className="grid gap-1.5">
           {todos.map((todo) => (
             <TodoCard
               key={todo.id}

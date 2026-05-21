@@ -56,8 +56,8 @@ export function TodoForm({ ownerType, editingTodo, onCancel, onSuccess }: TodoFo
     "w-full px-3 py-2 bg-[#111] border border-border rounded-lg text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-white/25";
 
   return (
-    <form ref={formRef} action={handleSubmit} className="bg-surface border border-border rounded-xl p-4 space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
+    <form ref={formRef} action={handleSubmit} className="bg-surface border border-border rounded-lg sm:rounded-xl p-3 sm:p-4 space-y-3 sm:space-y-4">
+      <div className="grid gap-2.5 sm:gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <input
             ref={titleRef}
@@ -80,7 +80,7 @@ export function TodoForm({ ownerType, editingTodo, onCancel, onSuccess }: TodoFo
           />
         </div>
         <div>
-          <label className="block text-[11px] font-medium text-muted mb-1 uppercase tracking-wider">Priority</label>
+          <label className="block text-[11px] font-medium text-muted mb-1 uppercase tracking-wider">Priority <span className="normal-case text-muted/50">(optional)</span></label>
           <select name="priority" defaultValue={editingTodo?.priority ?? "medium"} className={inputClass}>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
@@ -88,7 +88,7 @@ export function TodoForm({ ownerType, editingTodo, onCancel, onSuccess }: TodoFo
           </select>
         </div>
         <div>
-          <label className="block text-[11px] font-medium text-muted mb-1 uppercase tracking-wider">Due Date</label>
+          <label className="block text-[11px] font-medium text-muted mb-1 uppercase tracking-wider">Due Date <span className="normal-case text-muted/50">(optional)</span></label>
           <input name="due_date" type="date" defaultValue={dueValue} className={inputClass} />
         </div>
       </div>
