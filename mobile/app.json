@@ -20,9 +20,12 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiBaseUrl": "https://YOUR-DEPLOYED-APP.vercel.app",
+      "apiBaseUrl": "https://ufttodo.vercel.app",
       "eas": {
-        "projectId": "YOUR-EAS-PROJECT-ID"
+        "projectId": "4cc36c5a-b3a1-445a-8886-20d1c13163d9"
+      },
+      "router": {
+        "origin": false
       }
     }
   }
