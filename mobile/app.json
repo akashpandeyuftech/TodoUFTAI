@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "UFTech Tasks",
+    "slug": "uftech-tasks",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "uftechTasks",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#1e3a5f"
+    },
+    "android": {
+      "package": "com.uftech.tasks"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiBaseUrl": "https://YOUR-DEPLOYED-APP.vercel.app",
+      "eas": {
+        "projectId": "YOUR-EAS-PROJECT-ID"
+      }
+    }
+  }
+}

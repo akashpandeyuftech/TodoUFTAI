@@ -46,5 +46,5 @@ export async function POST(request: Request) {
     path: "/",
   });
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, token });
 }

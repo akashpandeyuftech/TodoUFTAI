@@ -45,5 +45,5 @@ export async function POST(request: Request) {
     path: "/",
   });
 
-  return NextResponse.json({ success: true, teamId: user.teamId });
+  return NextResponse.json({ success: true, teamId: user.teamId, token });
 }
